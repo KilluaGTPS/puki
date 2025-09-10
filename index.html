@@ -115,81 +115,6 @@
             font-size: 0.9rem;
         }
         
-        .custom-input {
-            margin-top: 20px;
-            padding: 15px;
-            background-color: #f0f2f5;
-            border-radius: 12px;
-        }
-        
-        .custom-input h4 {
-            margin-bottom: 10px;
-            color: #555;
-            text-align: left;
-        }
-        
-        .input-group {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-        
-        .input-group input {
-            flex: 1;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 1rem;
-        }
-        
-        .input-group button {
-            padding: 12px 20px;
-            background: linear-gradient(135deg, #6e8efb, #a777e3);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-        
-        .input-group button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-        
-        .custom-list {
-            max-height: 150px;
-            overflow-y: auto;
-            text-align: left;
-            background: white;
-            border-radius: 8px;
-            padding: 10px;
-            border: 1px solid #eee;
-        }
-        
-        .custom-item {
-            padding: 8px;
-            border-bottom: 1px solid #eee;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .custom-item:last-child {
-            border-bottom: none;
-        }
-        
-        .custom-item button {
-            background: #f44336;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            padding: 4px 8px;
-            cursor: pointer;
-            font-size: 0.8rem;
-        }
-        
         .text-display {
             background-color: #f8f9fa;
             border-radius: 15px;
@@ -199,11 +124,12 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
+            font-size: 28px;
             line-height: 1.5;
             color: #333;
             box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.05);
             position: relative;
+            font-weight: 600;
         }
         
         .text-display::before {
@@ -253,7 +179,7 @@
             gap: 10px;
         }
         
-        #start-btn {
+        #start-btn, #next-btn {
             background: linear-gradient(135deg, #4CAF50, #2E8B57);
             color: white;
             box-shadow: 0 4px 10px rgba(76, 175, 80, 0.3);
@@ -340,6 +266,24 @@
             font-size: 24px;
         }
         
+        .progress-container {
+            width: 100%;
+            height: 8px;
+            background-color: #e0e0e0;
+            border-radius: 4px;
+            margin: 20px 0;
+            overflow: hidden;
+            display: none;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(135deg, #6e8efb, #a777e3);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+        
         @media (max-width: 768px) {
             .container {
                 padding: 20px;
@@ -350,16 +294,12 @@
                 gap: 15px;
             }
             
-            .input-group {
-                flex-direction: column;
-            }
-            
             button {
                 padding: 12px 25px;
             }
             
             .text-display {
-                font-size: 20px;
+                font-size: 22px;
                 padding: 20px 20px 20px 40px;
             }
             
@@ -413,18 +353,11 @@
                         </div>
                     </div>
                 </div>
-                
-                <div class="custom-input">
-                    <h4>Add Your Own Words/Sentences</h4>
-                    <div class="input-group">
-                        <input type="text" id="custom-input" placeholder="Enter your word or sentence">
-                        <button id="add-custom-btn">Add</button>
-                    </div>
-                    <div class="custom-list" id="custom-list">
-                        <p>No custom items added yet</p>
-                    </div>
-                </div>
             </div>
+        </div>
+        
+        <div class="progress-container" id="progress-container">
+            <div class="progress-bar" id="progress-bar"></div>
         </div>
         
         <div class="accuracy">
@@ -439,6 +372,9 @@
         <div class="buttons">
             <button id="start-btn">
                 <i class="fas fa-play"></i>Start
+            </button>
+            <button id="next-btn" style="display: none;">
+                <i class="fas fa-forward"></i>Next
             </button>
             <button id="record-btn">
                 <i class="fas fa-microphone mic-icon"></i>
@@ -455,6 +391,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const startBtn = document.getElementById('start-btn');
+            const nextBtn = document.getElementById('next-btn');
             const recordBtn = document.getElementById('record-btn');
             const speakBtn = document.getElementById('speak-btn');
             const textDisplay = document.getElementById('text-display');
@@ -463,9 +400,8 @@
             const statusEl = document.getElementById('status');
             const settingsToggle = document.querySelector('.settings-toggle');
             const settingsContent = document.querySelector('.settings-content');
-            const customInput = document.getElementById('custom-input');
-            const addCustomBtn = document.getElementById('add-custom-btn');
-            const customList = document.getElementById('custom-list');
+            const progressContainer = document.getElementById('progress-container');
+            const progressBar = document.getElementById('progress-bar');
             
             // Get radio buttons
             const levelRadios = document.querySelectorAll('input[name="level"]');
@@ -475,6 +411,7 @@
             let currentText = '';
             let isRecording = false;
             let processingTimeout;
+            let canPlaySound = false; // Control when the sound can be played
             
             // Word and sentence banks by difficulty
             const wordBanks = {
@@ -534,135 +471,15 @@
                 ]
             };
             
-            // Custom words and sentences storage
-            const customItems = {
-                beginner: { words: [], sentences: [] },
-                intermediate: { words: [], sentences: [] },
-                advanced: { words: [], sentences: [] }
-            };
-            
-            // Load custom items from localStorage if available
-            function loadCustomItems() {
-                const savedItems = localStorage.getItem('pronunciationCustomItems');
-                if (savedItems) {
-                    const parsedItems = JSON.parse(savedItems);
-                    Object.assign(customItems, parsedItems);
-                    updateCustomList();
-                }
-            }
-            
-            // Save custom items to localStorage
-            function saveCustomItems() {
-                localStorage.setItem('pronunciationCustomItems', JSON.stringify(customItems));
-            }
-            
-            // Update custom list display
-            function updateCustomList() {
-                let selectedLevel = 'beginner';
-                for (const radio of levelRadios) {
-                    if (radio.checked) {
-                        selectedLevel = radio.value;
-                        break;
-                    }
-                }
-                
-                let selectedType = 'word';
-                for (const radio of typeRadios) {
-                    if (radio.checked) {
-                        selectedType = radio.value;
-                        break;
-                    }
-                }
-                
-                const items = selectedType === 'word' 
-                    ? customItems[selectedLevel].words 
-                    : customItems[selectedLevel].sentences;
-                
-                if (items.length === 0) {
-                    customList.innerHTML = '<p>No custom items added yet</p>';
-                    return;
-                }
-                
-                customList.innerHTML = '';
-                items.forEach((item, index) => {
-                    const itemEl = document.createElement('div');
-                    itemEl.className = 'custom-item';
-                    itemEl.innerHTML = `
-                        <span>${item}</span>
-                        <button data-index="${index}">Delete</button>
-                    `;
-                    customList.appendChild(itemEl);
-                });
-                
-                // Add event listeners to delete buttons
-                const deleteButtons = customList.querySelectorAll('button');
-                deleteButtons.forEach(button => {
-                    button.addEventListener('click', function() {
-                        const index = parseInt(this.getAttribute('data-index'));
-                        if (selectedType === 'word') {
-                            customItems[selectedLevel].words.splice(index, 1);
-                        } else {
-                            customItems[selectedLevel].sentences.splice(index, 1);
-                        }
-                        saveCustomItems();
-                        updateCustomList();
-                    });
-                });
-            }
-            
             // Toggle settings panel
             settingsToggle.addEventListener('click', function() {
                 settingsContent.classList.toggle('active');
                 const icon = settingsToggle.querySelector('i');
                 if (settingsContent.classList.contains('active')) {
                     icon.className = 'fas fa-chevron-up';
-                    updateCustomList(); // Update list when opening settings
                 } else {
                     icon.className = 'fas fa-chevron-down';
                 }
-            });
-            
-            // Add custom item
-            addCustomBtn.addEventListener('click', function() {
-                const customText = customInput.value.trim();
-                if (customText === '') return;
-                
-                let selectedLevel = 'beginner';
-                for (const radio of levelRadios) {
-                    if (radio.checked) {
-                        selectedLevel = radio.value;
-                        break;
-                    }
-                }
-                
-                let selectedType = 'word';
-                for (const radio of typeRadios) {
-                    if (radio.checked) {
-                        selectedType = radio.value;
-                        break;
-                    }
-                }
-                
-                if (selectedType === 'word') {
-                    customItems[selectedLevel].words.push(customText);
-                } else {
-                    customItems[selectedLevel].sentences.push(customText);
-                }
-                
-                saveCustomItems();
-                updateCustomList();
-                customInput.value = '';
-                
-                statusEl.textContent = `"${customText}" added to ${selectedLevel} ${selectedType} list`;
-            });
-            
-            // Update custom list when level or type changes
-            levelRadios.forEach(radio => {
-                radio.addEventListener('change', updateCustomList);
-            });
-            
-            typeRadios.forEach(radio => {
-                radio.addEventListener('change', updateCustomList);
             });
             
             // Check if browser supports Web Speech API
@@ -680,6 +497,7 @@
                 recognition.onend = function() {
                     isRecording = false;
                     recordBtn.classList.remove('recording');
+                    updateProgressBar(0);
                 };
                 
                 recognition.onerror = function(event) {
@@ -687,14 +505,27 @@
                     isRecording = false;
                     recordBtn.classList.remove('recording');
                     statusEl.textContent = "Error: " + event.error;
+                    updateProgressBar(0);
                 };
             } else {
                 alert("Speech recognition is not supported in this browser. Try Chrome or Edge.");
                 recordBtn.disabled = true;
             }
             
+            // Function to update progress bar
+            function updateProgressBar(percentage) {
+                if (percentage > 0) {
+                    progressContainer.style.display = 'block';
+                    progressBar.style.width = percentage + '%';
+                } else {
+                    progressContainer.style.display = 'none';
+                }
+            }
+            
             // Function to speak the text using text-to-speech
             function speakText(text) {
+                if (!canPlaySound) return;
+                
                 if ('speechSynthesis' in window) {
                     const utterance = new SpeechSynthesisUtterance(text);
                     utterance.lang = 'en-US';
@@ -724,6 +555,14 @@
             });
             
             startBtn.addEventListener('click', function() {
+                startPractice();
+            });
+            
+            nextBtn.addEventListener('click', function() {
+                startPractice();
+            });
+            
+            function startPractice() {
                 // Get selected level and type
                 let selectedLevel = 'beginner';
                 let selectedType = 'word';
@@ -742,20 +581,8 @@
                     }
                 }
                 
-                // Combine default bank with custom items
-                let bank = [];
-                if (selectedType === 'word') {
-                    bank = [...wordBanks[selectedLevel], ...customItems[selectedLevel].words];
-                } else {
-                    bank = [...sentenceBanks[selectedLevel], ...customItems[selectedLevel].sentences];
-                }
-                
-                // If no items available, show message
-                if (bank.length === 0) {
-                    textDisplay.textContent = "No items available for this level and type";
-                    statusEl.textContent = "Add some words or sentences in the settings";
-                    return;
-                }
+                // Get the appropriate bank
+                let bank = selectedType === 'word' ? wordBanks[selectedLevel] : sentenceBanks[selectedLevel];
                 
                 // Get a random word or sentence based on selection
                 const randomIndex = Math.floor(Math.random() * bank.length);
@@ -764,18 +591,22 @@
                 // Display the text
                 textDisplay.textContent = currentText;
                 
-                // Show record and speak buttons
+                // Show record button and hide start button
                 recordBtn.style.display = 'flex';
                 speakBtn.style.display = 'flex';
                 startBtn.style.display = 'none';
+                nextBtn.style.display = 'none';
                 
                 // Reset accuracy
                 accuracyValue.textContent = '0%';
                 accuracyValue.style.color = '#333';
                 resultDiv.style.display = 'none';
                 
+                // Don't allow sound until after user has recorded
+                canPlaySound = false;
+                
                 statusEl.textContent = "Click the microphone button and read the text aloud";
-            });
+            }
             
             recordBtn.addEventListener('click', function() {
                 if (!isRecording) {
@@ -783,12 +614,16 @@
                     isRecording = true;
                     recordBtn.classList.add('recording');
                     statusEl.textContent = "Recording... Speak now";
+                    
+                    // Show progress bar with animation
+                    updateProgressBar(30);
                 } else {
                     // Stop recording and process immediately
                     recognition.stop();
                     isRecording = false;
                     recordBtn.classList.remove('recording');
                     statusEl.textContent = "Processing your speech...";
+                    updateProgressBar(70);
                     
                     // Clear any existing timeout
                     if (processingTimeout) {
@@ -798,12 +633,14 @@
                     // Force immediate processing (simulate result if API doesn't respond quickly)
                     processingTimeout = setTimeout(() => {
                         statusEl.textContent = "Please try speaking again";
-                    }, 1500);
+                        updateProgressBar(0);
+                    }, 3000);
                 }
             });
             
             function checkPronunciation(userSpeech) {
                 statusEl.textContent = "Checking your pronunciation...";
+                updateProgressBar(90);
                 
                 // Clear processing timeout
                 if (processingTimeout) {
@@ -862,14 +699,21 @@
                     accuracyValue.style.color = '#f44336';
                 }
                 
-                statusEl.textContent = "Pronunciation check completed. Click the microphone to try again or Start for a new text.";
+                statusEl.textContent = "Pronunciation check completed. Now you can hear the correct pronunciation.";
                 
-                // Show start button again
-                startBtn.style.display = 'flex';
+                // Show next button instead of start button
+                nextBtn.style.display = 'flex';
+                recordBtn.style.display = 'none';
                 
-                // Speak the correct pronunciation after a short delay
+                // Allow sound to be played now
+                canPlaySound = true;
+                
+                // Complete progress bar
+                updateProgressBar(100);
+                
+                // Hide progress bar after a delay
                 setTimeout(() => {
-                    speakText(currentText);
+                    updateProgressBar(0);
                 }, 1000);
             }
             
@@ -898,9 +742,6 @@
                 // If most characters match in order, consider it a partial match
                 return matchCount >= minLength * 0.7;
             }
-            
-            // Initialize the app
-            loadCustomItems();
             
             // Preload voices for text-to-speech
             if ('speechSynthesis' in window) {
