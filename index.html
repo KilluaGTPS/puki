@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>English Pronunciation Practice</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #6e8efb, #a777e3);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background-color: white;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+            width: 90%;
+            max-width: 600px;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        p {
+            color: #666;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        
+        .text-display {
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 25px;
+            min-height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            line-height: 1.5;
+            color: #333;
+        }
+        
+        .accuracy {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        .buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        
+        button {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+        
+        #start-btn {
+            background-color: #4CAF50;
+            color: white;
+        }
+        
+        #record-btn {
+            background-color: #2196F3;
+            color: white;
+            display: none;
+        }
+        
+        #record-btn.recording {
+            background-color: #f44336;
+            animation: pulse 1.5s infinite;
+        }
+        
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            background-color: #f8f9fa;
+            display: none;
+        }
+        
+        .correct {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        
+        .incorrect {
+            color: #f44336;
+            text-decoration: line-through;
+            font-weight: bold;
+        }
+        
+        .status {
+            margin-top: 20px;
+            font-style: italic;
+            color: #666;
+        }
+        
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.4);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(244, 67, 54, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(244, 67, 54, 0);
+            }
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+            
+            button {
+                padding: 12px 25px;
+            }
+            
+            .text-display {
+                font-size: 18px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>English Pronunciation Practice</h1>
+        <p>Click "Start" to get a sentence. Then click "Record" and read the sentence aloud. We'll check your pronunciation!</p>
+        
+        <div class="accuracy">Accuracy: <span id="accuracy-value">0%</span></div>
+        
+        <div class="text-display" id="text-display">
+            Click the Start button to begin...
+        </div>
+        
+        <div class="buttons">
+            <button id="start-btn">Start</button>
+            <button id="record-btn">Record</button>
+        </div>
+        
+        <div class="result" id="result"></div>
+        <div class="status" id="status">Press Start to begin</div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const startBtn = document.getElementById('start-btn');
+            const recordBtn = document.getElementById('record-btn');
+            const textDisplay = document.getElementById('text-display');
+            const resultDiv = document.getElementById('result');
+            const accuracyValue = document.getElementById('accuracy-value');
+            const statusEl = document.getElementById('status');
+            
+            let recognition;
+            let currentText = '';
+            let isRecording = false;
+            
+            // Sample sentences for practice
+            const sampleSentences = [
+                "The quick brown fox jumps over the lazy dog",
+                "She sells seashells by the seashore",
+                "How much wood would a woodchuck chuck if a woodchuck could chuck wood",
+                "Peter Piper picked a peck of pickled peppers",
+                "I scream, you scream, we all scream for ice cream",
+                "Unique New York, unique New York, you know you need unique New York",
+                "Red lorry, yellow lorry, red lorry, yellow lorry",
+                "Which wristwatches are Swiss wristwatches",
+                "Four fine fresh fish for you",
+                "He threw three free throws"
+            ];
+            
+            // Check if browser supports Web Speech API
+            if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+                recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+                recognition.continuous = false;
+                recognition.interimResults = false;
+                recognition.lang = 'en-US';
+                
+                recognition.onresult = function(event) {
+                    const transcript = event.results[0][0].transcript;
+                    checkPronunciation(transcript);
+                };
+                
+                recognition.onend = function() {
+                    isRecording = false;
+                    recordBtn.classList.remove('recording');
+                    statusEl.textContent = "Recording stopped. Processing...";
+                };
+                
+                recognition.onerror = function(event) {
+                    console.error('Speech recognition error', event.error);
+                    isRecording = false;
+                    recordBtn.classList.remove('recording');
+                    statusEl.textContent = "Error: " + event.error;
+                };
+            } else {
+                alert("Speech recognition is not supported in this browser. Try Chrome or Edge.");
+                recordBtn.disabled = true;
+            }
+            
+            startBtn.addEventListener('click', function() {
+                // Get a random sentence
+                const randomIndex = Math.floor(Math.random() * sampleSentences.length);
+                currentText = sampleSentences[randomIndex];
+                
+                // Display the sentence
+                textDisplay.textContent = currentText;
+                
+                // Show record button
+                recordBtn.style.display = 'inline-block';
+                startBtn.style.display = 'none';
+                
+                // Reset accuracy
+                accuracyValue.textContent = '0%';
+                resultDiv.style.display = 'none';
+                
+                statusEl.textContent = "Click the Record button and read the sentence aloud";
+            });
+            
+            recordBtn.addEventListener('click', function() {
+                if (!isRecording) {
+                    recognition.start();
+                    isRecording = true;
+                    recordBtn.classList.add('recording');
+                    statusEl.textContent = "Recording... Speak now";
+                } else {
+                    recognition.stop();
+                    isRecording = false;
+                    recordBtn.classList.remove('recording');
+                    statusEl.textContent = "Stopping recording...";
+                }
+            });
+            
+            function checkPronunciation(userSpeech) {
+                statusEl.textContent = "Checking your pronunciation...";
+                
+                // Simple algorithm to compare spoken text with target text
+                const targetWords = currentText.toLowerCase().split(' ');
+                const spokenWords = userSpeech.toLowerCase().split(' ');
+                
+                let correctCount = 0;
+                let resultHTML = '';
+                
+                // Compare word by word
+                for (let i = 0; i < targetWords.length; i++) {
+                    if (i < spokenWords.length && spokenWords[i] === targetWords[i]) {
+                        correctCount++;
+                        resultHTML += `<span class="correct">${targetWords[i]}</span> `;
+                    } else {
+                        resultHTML += `<span class="incorrect">${targetWords[i]}</span> `;
+                    }
+                }
+                
+                // Add any extra words that were spoken
+                if (spokenWords.length > targetWords.length) {
+                    for (let i = targetWords.length; i < spokenWords.length; i++) {
+                        resultHTML += `<span class="incorrect">[${spokenWords[i]}]</span> `;
+                    }
+                }
+                
+                // Calculate accuracy percentage
+                const accuracy = Math.round((correctCount / targetWords.length) * 100);
+                
+                // Display results
+                resultDiv.innerHTML = resultHTML;
+                resultDiv.style.display = 'block';
+                accuracyValue.textContent = `${accuracy}%`;
+                
+                // Change accuracy color based on performance
+                if (accuracy >= 80) {
+                    accuracyValue.style.color = '#4CAF50';
+                } else if (accuracy >= 50) {
+                    accuracyValue.style.color = '#FF9800';
+                } else {
+                    accuracyValue.style.color = '#f44336';
+                }
+                
+                statusEl.textContent = "Pronunciation check completed. Click Record to try again or Start for a new sentence.";
+                
+                // Show start button again
+                startBtn.style.display = 'inline-block';
+            }
+        });
+    </script>
+</body>
+  </html>
