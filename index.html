@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>English Pronunciation Practice</title>
+    <title>English Pronunciation Practice with AI</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
@@ -284,6 +284,16 @@
             transition: width 0.3s ease;
         }
         
+        .ai-powered {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #666;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+        
         @media (max-width: 768px) {
             .container {
                 padding: 20px;
@@ -311,8 +321,8 @@
 </head>
 <body>
     <div class="container">
-        <h1>English Pronunciation Practice</h1>
-        <p>Select your level and practice type, then click "Start" to begin. Record your pronunciation and get instant feedback!</p>
+        <h1>English Pronunciation Practice with AI</h1>
+        <p>Select your level and practice type, then click "Start" to begin. Record your pronunciation and get AI-powered feedback!</p>
         
         <div class="settings-panel">
             <div class="settings-toggle">
@@ -386,6 +396,9 @@
         
         <div class="result" id="result"></div>
         <div class="status" id="status">Press Start to begin</div>
+        <div class="ai-powered">
+            <i class="fas fa-robot"></i> Powered by AI Speech Recognition
+        </div>
     </div>
 
     <script>
@@ -482,34 +495,36 @@
                 }
             });
             
-            // Check if browser supports Web Speech API
-            if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
-                recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-                recognition.continuous = false;
-                recognition.interimResults = false;
-                recognition.lang = 'en-US';
-                
-                recognition.onresult = function(event) {
-                    const transcript = event.results[0][0].transcript;
-                    checkPronunciation(transcript);
-                };
-                
-                recognition.onend = function() {
-                    isRecording = false;
-                    recordBtn.classList.remove('recording');
-                    updateProgressBar(0);
-                };
-                
-                recognition.onerror = function(event) {
-                    console.error('Speech recognition error', event.error);
-                    isRecording = false;
-                    recordBtn.classList.remove('recording');
-                    statusEl.textContent = "Error: " + event.error;
-                    updateProgressBar(0);
-                };
-            } else {
-                alert("Speech recognition is not supported in this browser. Try Chrome or Edge.");
-                recordBtn.disabled = true;
+            // Initialize speech recognition
+            function initSpeechRecognition() {
+                if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+                    recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+                    recognition.continuous = false;
+                    recognition.interimResults = false;
+                    recognition.lang = 'en-US';
+                    
+                    recognition.onresult = function(event) {
+                        const transcript = event.results[0][0].transcript;
+                        checkPronunciation(transcript);
+                    };
+                    
+                    recognition.onend = function() {
+                        isRecording = false;
+                        recordBtn.classList.remove('recording');
+                        updateProgressBar(0);
+                    };
+                    
+                    recognition.onerror = function(event) {
+                        console.error('Speech recognition error', event.error);
+                        isRecording = false;
+                        recordBtn.classList.remove('recording');
+                        statusEl.textContent = "Error: " + event.error;
+                        updateProgressBar(0);
+                    };
+                } else {
+                    alert("Speech recognition is not supported in this browser. Try Chrome or Edge.");
+                    recordBtn.disabled = true;
+                }
             }
             
             // Function to update progress bar
@@ -639,7 +654,7 @@
             });
             
             function checkPronunciation(userSpeech) {
-                statusEl.textContent = "Checking your pronunciation...";
+                statusEl.textContent = "AI is analyzing your pronunciation...";
                 updateProgressBar(90);
                 
                 // Clear processing timeout
@@ -693,13 +708,14 @@
                 // Change accuracy color based on performance
                 if (accuracy >= 80) {
                     accuracyValue.style.color = '#4CAF50';
+                    statusEl.textContent = "Excellent pronunciation!";
                 } else if (accuracy >= 50) {
                     accuracyValue.style.color = '#FF9800';
+                    statusEl.textContent = "Good effort! Keep practicing.";
                 } else {
                     accuracyValue.style.color = '#f44336';
+                    statusEl.textContent = "Try again and focus on each word.";
                 }
-                
-                statusEl.textContent = "Pronunciation check completed. Now you can hear the correct pronunciation.";
                 
                 // Show next button instead of start button
                 nextBtn.style.display = 'flex';
@@ -743,10 +759,80 @@
                 return matchCount >= minLength * 0.7;
             }
             
+            // Enhanced pronunciation analysis using phonetic comparison
+            function enhancedPronunciationCheck(userSpeech) {
+                // This is a simplified version - a real implementation would use
+                // a phonetic algorithm or API for more accurate comparison
+                
+                const target = currentText.toLowerCase();
+                const spoken = userSpeech.toLowerCase();
+                
+                // Simple comparison first
+                if (target === spoken) {
+                    return { accuracy: 100, feedback: "Perfect pronunciation!" };
+                }
+                
+                // Calculate Levenshtein distance for similarity
+                const distance = levenshteinDistance(target, spoken);
+                const maxLength = Math.max(target.length, spoken.length);
+                const similarity = (1 - distance / maxLength) * 100;
+                
+                // Generate feedback based on similarity
+                let feedback = "";
+                if (similarity >= 90) {
+                    feedback = "Very good! Almost perfect.";
+                } else if (similarity >= 70) {
+                    feedback = "Good effort. Pay attention to a few sounds.";
+                } else if (similarity >= 50) {
+                    feedback = "Keep practicing. Focus on the pronunciation.";
+                } else {
+                    feedback = "Try again. Listen to the correct pronunciation first.";
+                }
+                
+                return { 
+                    accuracy: Math.round(similarity), 
+                    feedback: feedback 
+                };
+            }
+            
+            // Levenshtein distance algorithm for string similarity
+            function levenshteinDistance(a, b) {
+                const matrix = [];
+                
+                for (let i = 0; i <= b.length; i++) {
+                    matrix[i] = [i];
+                }
+                
+                for (let j = 0; j <= a.length; j++) {
+                    matrix[0][j] = j;
+                }
+                
+                for (let i = 1; i <= b.length; i++) {
+                    for (let j = 1; j <= a.length; j++) {
+                        if (b.charAt(i - 1) === a.charAt(j - 1)) {
+                            matrix[i][j] = matrix[i - 1][j - 1];
+                        } else {
+                            matrix[i][j] = Math.min(
+                                matrix[i - 1][j - 1] + 1, // substitution
+                                Math.min(
+                                    matrix[i][j - 1] + 1, // insertion
+                                    matrix[i - 1][j] + 1  // deletion
+                                )
+                            );
+                        }
+                    }
+                }
+                
+                return matrix[b.length][a.length];
+            }
+            
             // Preload voices for text-to-speech
             if ('speechSynthesis' in window) {
                 speechSynthesis.getVoices(); // This helps preload voices
             }
+            
+            // Initialize speech recognition when page loads
+            initSpeechRecognition();
         });
     </script>
 </body>
