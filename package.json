@@ -1,8 +1,0 @@
-{
-  "name": "blockblast-solver",
-  "version": "1.0.0",
-  "type": "module",
-  "dependencies": {
-    "@vercel/node": "^2.0.0"
-  }
-}
