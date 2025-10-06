@@ -1,15 +1,8 @@
 {
   "name": "blockblast-solver",
   "version": "1.0.0",
-  "description": "Block Blast Solver dengan Image Processing",
-  "scripts": {
-    "dev": "vercel dev"
-  },
+  "type": "module",
   "dependencies": {
-    "@vercel/node": "^2.0.0",
-    "canvas": "^2.11.2"
-  },
-  "devDependencies": {
-    "vercel": "^28.0.0"
+    "@vercel/node": "^2.0.0"
   }
 }
